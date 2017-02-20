@@ -1,29 +1,40 @@
 <?php
-    $username = "azure"; 
-    $password = "password";   
-    $host = "localhost";
-    $database="worker";
-    
-    $server = mysql_connect($host, $username, $password);
-    $connection = mysql_select_db($database, $server);
+$servername = "";
+$username = "";
+$password = "";
+$dbname = "";
 
-    $myquery = "
-SELECT  `city_ascii`, `lat`, `lng` FROM  `worker.cities`
-";
-    $query = mysql_query($myquery);
-    
-    if ( ! $query ) {
-        echo mysql_error();
-        die;
+// Parsing connnection string
+foreach ($_SERVER as $key => $value) {
+    if (strpos($key, "MYSQLCONNSTR_") !== 0) {
+        continue;
     }
-    
-    $data = array();
-    
-    for ($x = 0; $x < mysql_num_rows($query); $x++) {
-        $data[] = mysql_fetch_assoc($query);
+
+    $servername = preg_replace("/^.*Data Source=(.+?);.*$/", "\\1", $value);
+    $dbname = preg_replace("/^.*Database=(.+?);.*$/", "\\1", $value);
+    $username = preg_replace("/^.*User Id=(.+?);.*$/", "\\1", $value);
+    $password = preg_replace("/^.*Password=(.+?)$/", "\\1", $value);
+}
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
+// Create query
+$sql = "SELECT id, Institution_Name, Institution_city FROM colleges";
+$result = $conn->query($sql);
+
+$arr = "{\"colleges\":[";
+
+if ($result->num_rows > 0) {
+    // output data of each row
+    for ($x = 0; $x < mysqli_num_rows($result); $x++) {
+        $data = mysqli_fetch_assoc($result);
+        $arr .= "{\"name\":\"" . $data['Institution_Name'] . "\",\"city\": \"" . $data["Institution_city"] . "\"},";
+        //echo $data;
     }
-    
-    echo json_encode($data);     
-     
-    mysql_close($server);
+    $arr = substr($arr, 0, -1);
+    $arr .= "]}";
+    echo $arr; 
+} else {
+    echo "0 results";
+}
 ?>
